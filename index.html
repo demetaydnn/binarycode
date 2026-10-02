@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Binary Kod Dedektifi</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f3f6fb;margin:0;padding:20px;color:#1f2937}
+.app{max-width:1000px;margin:auto;background:white;border-radius:22px;padding:24px}
+h1{text-align:center}
+.top{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.badge{background:#eef2ff;padding:9px 14px;border-radius:999px;font-weight:700}
+.card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:18px;padding:20px;margin-top:18px}
+.bits{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+.bit{width:58px;height:58px;background:#111827;color:white;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800}
+button,input,select{font:inherit}
+button{padding:11px 16px;border:0;border-radius:10px;font-weight:700;cursor:pointer}
+.primary{background:#2563eb;color:white}
+.option{background:white;color:#111827;border:2px solid #94a3b8;min-width:80px;font-size:20px}
+.controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+input,select{width:100%;padding:12px;border:2px solid #94a3b8;border-radius:10px;background:white;color:#111827;font-size:18px}
+.feedback{text-align:center;font-weight:700;font-size:19px;min-height:28px;margin-top:10px}
+.ok{color:#15803d}.bad{color:#b91c1c}
+.output{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.code{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:10px;text-align:center}
+.code b{display:block;font-size:20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>💻 Binary Kod Dedektifi</h1>
+<p style="text-align:center">Avrupa Kod Haftası • 3. Sınıf</p>
+
+<div class="top">
+<div class="badge">Puan: <span id="score">0</span></div>
+<div class="badge">Doğru: <span id="correct">0</span></div>
+<div class="badge">Hata: <span id="wrong">0</span></div>
+<div class="badge">Görev: <span id="taskNo">1</span>/10</div>
+</div>
+
+<div class="card">
+<h2>1. Harfi Kodla</h2>
+<p>Bir harf seç ve binary kodunu gör.</p>
+<select id="letterSelect"></select>
+<div id="letterBits" class="bits"></div>
+<div id="letterResult" class="feedback"></div>
+</div>
+
+<div class="card">
+<h2>2. 10 Binary Görevi</h2>
+<p>Her doğru cevapta bir sonraki göreve geç.</p>
+<div id="questionBits" class="bits"></div>
+<div id="options" class="controls"></div>
+<div id="quizFeedback" class="feedback"></div>
+<div class="controls"><button id="nextQuestion" class="primary" disabled>Sonraki Görev</button></div>
+</div>
+
+<div class="grid">
+<div class="card">
+<h2>3. Kendi Kelimeni Kodla</h2>
+<input id="wordInput" maxlength="10" placeholder="Örnek: ROBOT">
+<div class="controls" style="margin-top:10px"><button id="encodeWord" class="primary">Kodla</button></div>
+<div id="wordOutput" class="output"></div>
+</div>
+
+<div class="card">
+<h2>4. Gizli Mesajlar</h2>
+<p id="secretCode" style="font-family:Consolas,monospace;font-size:19px;text-align:center;line-height:1.7"></p>
+<input id="secretAnswer" maxlength="10" placeholder="Cevabını yaz">
+<div class="controls" style="margin-top:10px">
+<button id="checkSecret" class="primary">Kontrol Et</button>
+<button id="newSecret">Yeni Mesaj</button>
+</div>
+<div id="secretFeedback" class="feedback"></div>
+</div>
+</div>
+
+<p style="text-align:center;color:#64748b;margin-top:20px">Kod tablosunu akıllı tahtada ayrı olarak kullanabilirsiniz.</p>
+</div>
+
+<script>
+const letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const codeOf=ch=>(letters.indexOf(ch)+1).toString(2).padStart(5,"0");
+let score=0,correct=0,wrong=0,currentIndex=0,answered=false,currentAnswer="A",currentSecret="ROBOT";
+const quizOrder=["C","F","K","M","R","T","B","Y","H","P"];
+const secretWords=["ROBOT","KOD","OYUN","BILGI","KALEM","KITAP","SINIF","RENK","BULUT","YILDIZ"];
+function q(id){return document.getElementById(id)}
+function update(){q("score").textContent=score;q("correct").textContent=correct;q("wrong").textContent=wrong;q("taskNo").textContent=Math.min(currentIndex+1,10)}
+function bits(el,code){el.innerHTML="";code.split("").forEach(x=>{let d=document.createElement("div");d.className="bit";d.textContent=x;el.appendChild(d)})}
+
+letters.forEach(l=>{let o=document.createElement("option");o.value=l;o.textContent=l;q("letterSelect").appendChild(o)});
+function showLetter(){let l=q("letterSelect").value;bits(q("letterBits"),codeOf(l));q("letterResult").textContent=l+" = "+codeOf(l)}
+q("letterSelect").addEventListener("change",showLetter);
+
+function renderQuestion(){
+ answered=false;currentAnswer=quizOrder[currentIndex];bits(q("questionBits"),codeOf(currentAnswer));
+ q("quizFeedback").textContent="";q("nextQuestion").disabled=true;
+ let set=new Set([currentAnswer]);while(set.size<4)set.add(letters[Math.floor(Math.random()*letters.length)]);
+ let arr=[...set].sort(()=>Math.random()-.5);q("options").innerHTML="";
+ arr.forEach(l=>{let b=document.createElement("button");b.className="option";b.textContent=l;b.onclick=()=>{
+  if(answered)return;
+  if(l===currentAnswer){answered=true;score+=10;correct++;q("quizFeedback").textContent="✅ Doğru! "+l+" = "+codeOf(l);q("quizFeedback").className="feedback ok";q("nextQuestion").disabled=false}
+  else{wrong++;q("quizFeedback").textContent="❌ Bir daha düşün.";q("quizFeedback").className="feedback bad"}
+  update()
+ };q("options").appendChild(b)})
+}
+q("nextQuestion").onclick=()=>{if(currentIndex<9){currentIndex++;update();renderQuestion()}else{q("quizFeedback").textContent="🏆 Tebrikler! 10 görevi tamamladın.";q("quizFeedback").className="feedback ok";q("nextQuestion").disabled=true}};
+
+q("encodeWord").onclick=()=>{
+ let raw=q("wordInput").value.toUpperCase().replace(/[^A-Z]/g,"").slice(0,10);q("wordOutput").innerHTML="";
+ if(!raw){q("wordOutput").textContent="Bir kelime yaz.";return}
+ raw.split("").forEach(ch=>{let d=document.createElement("div");d.className="code";d.innerHTML="<b>"+ch+"</b>"+codeOf(ch);q("wordOutput").appendChild(d)})
+};
+
+function newSecret(){
+ currentSecret=secretWords[Math.floor(Math.random()*secretWords.length)];
+ q("secretCode").textContent=currentSecret.split("").map(codeOf).join("   ");
+ q("secretAnswer").value="";q("secretFeedback").textContent=""
+}
+q("checkSecret").onclick=()=>{
+ let a=q("secretAnswer").value.trim().toUpperCase();
+ if(a===currentSecret){score+=20;correct++;q("secretFeedback").textContent="✅ Harika! "+currentSecret;q("secretFeedback").className="feedback ok"}
+ else{wrong++;q("secretFeedback").textContent="❌ Tekrar dene.";q("secretFeedback").className="feedback bad"}
+ update()
+};
+q("newSecret").onclick=newSecret;
+
+showLetter();renderQuestion();newSecret();update();
+</script>
+</body>
+</html>
